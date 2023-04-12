@@ -5,3 +5,4 @@ When correlating two signals without complete overlap, it is important to normal
 This script shows what happens when the normalization by the overlapping region is not performed. The first time shift estimated is off by 9 samples and the mismatch is clearly visible in the time shifted plots of the two signals. When the normalization is calculated per shift, the estimated timeshift is correct.
 
 This image shows the expected out:
+![Figure_1](https://user-images.githubusercontent.com/6125615/231498309-445a288a-95e0-4a49-88da-be616b36f708.png)
