@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy
 
 # Make some sinusoids to find the timeshift between
-dt = 0.001
+dt = 1/44100
 T = 2.0
 t_shift_gt = -0.15
 f = 1
@@ -16,7 +17,8 @@ x2 = np.cos(f*2*np.pi*t2)
 x2 = x2 / np.linalg.norm(x2)
 
 # Calculate the correlation and the corresponding timeshift corresponding to each index
-C_x1x2 = np.correlate(x1, x2, mode='full')
+# C_x1x2 = np.correlate(x1, x2, mode='full')
+C_x1x2 = scipy.signal.correlate(x1, x2, mode='full')
 t_shift_C = np.arange(-T+dt, T, dt)
 
 # Attempt to estimate the time shift using the correlation directly
@@ -37,20 +39,15 @@ print('gt time shift {:0.3f} est time shift {:0.3f} error {:0.4f} s {} samples'
 
 # Calculate the magnitude of the portion of x1 that overlapped with x2
 # and vice versa for each sample in C_x1x2
-C_normalization_x1 = np.zeros(C_x1x2.shape[0])
-C_normalization_x2 = np.zeros(C_x1x2.shape[0])
+x1_ones = np.ones((x1.shape[0],))
+x1_square = np.square(x1)
+x1_sum_square = scipy.signal.correlate(x1_square, x1_ones, 'full')
+C_normalization_x1 = np.sqrt(x1_sum_square)
 
-center_index = int((C_x1x2.shape[0] + 1) / 2) - 1 # Index corresponding to zero shift
-low_shift_index  = -int((C_x1x2.shape[0] + 1) / 2) + 1
-high_shift_index =  int((C_x1x2.shape[0] + 1) / 2) - 1
-for i in range(low_shift_index, high_shift_index + 1):
-    low_norm_index  = max(0,           i)
-    high_norm_index = min(x1.shape[0], i + x1.shape[0])
-    C_normalization_x1[i+center_index] = np.linalg.norm(x1[low_norm_index:high_norm_index])
-
-    low_norm_index  = max(0,           -i)
-    high_norm_index = min(x2.shape[0], -i + x2.shape[0])
-    C_normalization_x2[i+center_index] = np.linalg.norm(x2[low_norm_index:high_norm_index])
+x2_ones = np.ones((x2.shape[0],))
+x2_square = np.square(x2)
+x2_sum_square = scipy.signal.correlate(x2_square, x2_ones, 'full')
+C_normalization_x2 = np.flip(np.sqrt(x2_sum_square))
 
 # Normalize the calculated correlation per shift
 C_x1x2_normalized_per_shift = C_x1x2 / (C_normalization_x1 * C_normalization_x2)
@@ -58,6 +55,7 @@ C_x1x2_normalized_per_shift = C_x1x2 / (C_normalization_x1 * C_normalization_x2)
 # Search for the maximum at most a half period back and forward due to periodicity of the input signal
 # and the fact that per shift normalization causes peaks a full period to have approximately equal magnitude
 # to the closest peak in the normalized correlation
+center_index = int((C_x1x2.shape[0] + 1) / 2) - 1 # Index corresponding to zero shift
 max_indices_back    = -int(((1 / f) / 2) / dt) + center_index
 max_indices_forward =  int(((1 / f) / 2) / dt) + center_index
 i_max_C_normalized = np.argmax(C_x1x2_normalized_per_shift[max_indices_back:max_indices_forward + 1]) + max_indices_back
